@@ -1,61 +1,63 @@
 # Godot MCP
 
-开源 Godot MCP 服务，让 AI 助手（Claude Code、Cursor、Codex 等）通过 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) 直接操控 Godot 4 编辑器。
+**Language:** **English** | [简体中文](README.zh.md)
+
+Open-source Godot MCP server that lets AI assistants (Claude Code, Cursor, Codex, and more) control the Godot 4 editor directly through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
 ```
-AI 客户端  ←—stdio/MCP—→  Node.js 服务  ←—WebSocket:6505—→  Godot 编辑器插件
+AI client  ←—stdio/MCP—→  Node.js server  ←—WebSocket:6505—→  Godot editor plugin
 ```
 
-## 实现概览
+## Overview
 
-| 组件 | 职责 |
-|------|------|
-| **Godot 插件** | WebSocket 客户端，接收 JSON-RPC 请求，调用编辑器 API 执行命令 |
-| **Node.js MCP 服务** | stdio 与 AI 客户端通信，WebSocket 服务端（默认端口 6505）转发工具调用 |
-| **命令路由** | `command_router.gd` 聚合 24 个 command 模块，共 **173** 个 handler |
-| **运行时服务** | 3 个 autoload（`MCPRuntimeBridge` / `MCPInputBridge` / `MCPScreenshotBridge`），通过 `user://` IPC 支持游戏内检视、输入模拟与截图 |
+| Component | Role |
+|-----------|------|
+| **Godot plugin** | WebSocket client that receives JSON-RPC requests and executes commands via editor APIs |
+| **Node.js MCP server** | Speaks stdio to AI clients; runs a WebSocket server (default port 6505) to forward tool calls |
+| **Command router** | `command_router.gd` aggregates 24 command modules with **173** handlers |
+| **Runtime services** | 3 autoloads (`MCPRuntimeBridge` / `MCPInputBridge` / `MCPScreenshotBridge`) use `user://` IPC for in-game inspection, input simulation, and screenshots |
 
-### 核心特性
+### Core features
 
-- **UndoRedo 集成**：节点增删改、属性变更等操作均走编辑器撤销栈
-- **智能类型解析**：`Vector2(100, 200)`、`#ff0000`、`Color(1,0,0)` 等字符串自动转换
-- **断线重连**：插件侧指数退避重连（1s → 60s）
-- **心跳保活**：双向 ping/pong，保持 WebSocket 长连接
-- **JSON-RPC 2.0**：Godot 插件与 Node.js 服务之间的标准协议
+- **UndoRedo integration** — node add/remove/edit and property changes go through the editor undo stack
+- **Smart type parsing** — strings like `Vector2(100, 200)`, `#ff0000`, `Color(1,0,0)` are converted automatically
+- **Reconnect with backoff** — exponential backoff on the plugin side (1s → 60s)
+- **Heartbeat** — bidirectional ping/pong to keep the WebSocket alive
+- **JSON-RPC 2.0** — standard protocol between the Godot plugin and the Node.js server
 
-## 工具分类
+## Tool categories
 
-**173 个 MCP 工具**，覆盖 **26 个类别**：
+**173 MCP tools** across **26 categories**:
 
-| 类别 | 工具数 | 代表能力 |
-|------|--------|----------|
-| Project | 7 | 项目信息、文件搜索、UID 转换、项目设置读写 |
-| Scene | 10 | 场景树、创建/删除/实例化场景、运行/停止、@export 变量 |
-| Node | 14 | 增删改移、属性读写、信号连接、分组、资源挂载 |
-| Script | 8 | 脚本 CRUD、挂载、语法校验、全文搜索 |
-| Editor | 13 | 编辑器/游戏截图、相机控制、错误日志、截图对比、自动关闭弹窗 |
-| Input | 7 | 键鼠/动作模拟、输入映射配置（含 deadzone） |
-| Runtime | 20 | 游戏内场景树、属性读写、信号监听、录制回放、UI 点击、导航 |
-| Animation | 6 | 动画轨道、关键帧、AnimationPlayer CRUD |
-| TileMap | 6 | 单元格读写、区域填充、已用格子查询 |
-| Theme/UI | 7 | 主题创建、Control 布局、颜色/字体/StyleBox 覆盖 |
-| Profiling | 2 | FPS、内存、Draw Call、物理等性能监视器 |
-| Batch/Refactor | 9 | 批量添加节点、按类型批量改属性、跨场景更新、依赖/循环检测 |
-| Shader | 6 | 着色器 CRUD、材质分配、参数读写 |
-| Export | 3 | 导出预设列表、导出命令生成 |
-| Resource | 6 | `.tres` 读写、Autoload 注册/移除 |
-| Physics | 6 | 碰撞体配置、物理层（含 layer 名称解析）、RayCast |
-| 3D Scene | 6 | 网格实例、相机、灯光、环境、GridMap |
-| Particle | 5 | GPU 粒子创建、材质、渐变、预设（火焰/烟雾/火花） |
-| Navigation | 6 | 导航区域/代理、网格烘焙、路径计算 |
-| Audio | 6 | 音频播放器、总线、效果器 |
-| AnimationTree | 8 | 状态机、过渡、混合树、参数设置 |
-| Analysis | 4 | 场景复杂度、信号流、未使用资源、项目统计 |
-| Testing/QA | 5 | 测试场景、断言、压力测试 |
-| Android | 4 | adb 设备列表、APK 导出部署、预设详情 |
+| Category | Tools | Highlights |
+|----------|-------|------------|
+| Project | 7 | Project info, file search, UID conversion, project settings |
+| Scene | 10 | Scene tree, create/delete/instance scenes, play/stop, `@export` variables |
+| Node | 14 | CRUD, properties, signals, groups, resource attachment |
+| Script | 8 | Script CRUD, attach, validation, full-text search |
+| Editor | 13 | Editor/game screenshots, camera control, error log, screenshot diff, auto-dismiss dialogs |
+| Input | 7 | Keyboard/mouse/action simulation, input map (incl. deadzone) |
+| Runtime | 20 | In-game scene tree, properties, signal watching, record/replay, UI clicks, navigation |
+| Animation | 6 | Tracks, keyframes, AnimationPlayer CRUD |
+| TileMap | 6 | Cell read/write, rect fill, used-cell queries |
+| Theme/UI | 7 | Theme creation, Control layout, color/font/StyleBox overrides |
+| Profiling | 2 | FPS, memory, draw calls, physics monitors |
+| Batch/Refactor | 9 | Batch add nodes, batch property updates, cross-scene edits, dependency/cycle detection |
+| Shader | 6 | Shader CRUD, material assignment, parameter read/write |
+| Export | 3 | Export preset list, export command generation |
+| Resource | 6 | `.tres` read/write, Autoload register/remove |
+| Physics | 6 | Collision bodies, physics layers (incl. layer name resolution), RayCast |
+| 3D Scene | 6 | Mesh instances, camera, lights, environment, GridMap |
+| Particle | 5 | GPU particles, materials, gradients, presets (fire/smoke/spark) |
+| Navigation | 6 | Nav regions/agents, mesh baking, pathfinding |
+| Audio | 6 | Audio players, buses, effects |
+| AnimationTree | 8 | State machines, transitions, blend trees, parameters |
+| Analysis | 4 | Scene complexity, signal flow, unused resources, project stats |
+| Testing/QA | 5 | Test scenarios, assertions, stress tests |
+| Android | 4 | adb device list, APK export/deploy, preset details |
 
 <details>
-<summary>展开查看全部 173 个工具名称</summary>
+<summary>Expand to see all 173 tool names</summary>
 
 **Project:** `get_project_info` · `get_filesystem_tree` · `search_files` · `get_project_settings` · `set_project_setting` · `uid_to_project_path` · `project_path_to_uid`
 
@@ -107,17 +109,17 @@ AI 客户端  ←—stdio/MCP—→  Node.js 服务  ←—WebSocket:6505—→ 
 
 </details>
 
-## 项目结构
+## Project structure
 
 ```
 godot-mcp/
-├── addons/godot_mcp/              # Godot 编辑器插件（复制到你的项目）
-│   ├── plugin.gd                  # 插件入口，注入 autoload
+├── addons/godot_mcp/              # Godot editor plugin (copy into your project)
+│   ├── plugin.gd                  # Plugin entry; injects autoloads
 │   ├── plugin.cfg
-│   ├── websocket_client.gd        # WebSocket 客户端 + JSON-RPC 分发
-│   ├── command_router.gd          # 命令路由，注册全部 handler
-│   ├── commands/                  # 24 个命令模块（173 个工具实现）
-│   │   ├── base_commands.gd       # 基类：Undo、运行时 IPC、截图等
+│   ├── websocket_client.gd        # WebSocket client + JSON-RPC dispatch
+│   ├── command_router.gd          # Command router; registers all handlers
+│   ├── commands/                  # 24 command modules (173 tool implementations)
+│   │   ├── base_commands.gd       # Base class: Undo, runtime IPC, screenshots, etc.
 │   │   ├── project_commands.gd
 │   │   ├── scene_commands.gd
 │   │   ├── node_commands.gd
@@ -142,47 +144,48 @@ godot-mcp/
 │   │   ├── analysis_commands.gd
 │   │   ├── test_commands.gd
 │   │   └── android_commands.gd
-│   ├── services/                  # 运行时 autoload 服务
-│   │   ├── mcp_runtime_bridge.gd  # 游戏内场景树 / 属性 / 脚本执行
-│   │   ├── mcp_input_bridge.gd    # 输入事件队列
+│   ├── services/                  # Runtime autoload services
+│   │   ├── mcp_runtime_bridge.gd  # In-game scene tree / properties / script execution
+│   │   ├── mcp_input_bridge.gd    # Input event queue
 │   │   └── mcp_screenshot_bridge.gd
 │   └── utils/
-│       ├── type_parser.gd         # Vector2 / Color 等类型解析
+│       ├── type_parser.gd         # Vector2 / Color type parsing
 │       ├── node_utils.gd
 │       └── resource_utils.gd
-├── server/                        # Node.js MCP 服务
+├── server/                        # Node.js MCP server
 │   ├── src/
-│   │   ├── index.ts               # MCP stdio 入口
-│   │   ├── godot-bridge.ts        # WebSocket 服务端 + JSON-RPC
-│   │   ├── tools.ts               # 工具注册逻辑
-│   │   └── tool-manifest.ts       # 173 个工具定义（名称 / 描述 / 参数）
-│   └── build/index.js             # 构建产物（MCP 启动入口）
-├── example/                       # 演示 Godot 项目
-├── .mcp.json.example              # MCP 客户端配置示例
-└── README.md
+│   │   ├── index.ts               # MCP stdio entry
+│   │   ├── godot-bridge.ts        # WebSocket server + JSON-RPC
+│   │   ├── tools.ts               # Tool registration
+│   │   └── tool-manifest.ts       # 173 tool definitions (name / description / params)
+│   └── build/index.js             # Build output (MCP entry point)
+├── example/                       # Demo Godot project
+├── .mcp.json.example              # Sample MCP client config
+├── README.md                      # English docs (default)
+└── README.zh.md                   # Chinese docs
 ```
 
-## 环境要求
+## Requirements
 
 - **Godot** 4.4+
 - **Node.js** 18+
-- 任意支持 MCP 的客户端：Claude Code、Cursor、Codex CLI、Cline、Windsurf 等
+- Any MCP-capable client: Claude Code, Cursor, Codex CLI, Cline, Windsurf, etc.
 
-## 使用方式
+## Usage
 
-### 1. 安装 Godot 插件
+### 1. Install the Godot plugin
 
-将 `addons/godot_mcp/` 复制到你的 Godot 项目的 `addons/` 目录：
+Copy `addons/godot_mcp/` into your Godot project's `addons/` directory:
 
 ```bash
 cp -r addons/godot_mcp /path/to/your-game/addons/
 ```
 
-在 Godot 中启用：**项目 → 项目设置 → 插件 → Godot MCP → 启用**
+Enable it in Godot: **Project → Project Settings → Plugins → Godot MCP → Enable**
 
-> 插件启用时会自动注入 3 个 autoload（`MCPRuntimeBridge` 等），停用插件后会自动移除。
+> Enabling the plugin injects 3 autoloads (`MCPRuntimeBridge`, etc.); they are removed when the plugin is disabled.
 
-### 2. 构建 MCP 服务
+### 2. Build the MCP server
 
 ```bash
 cd server
@@ -190,18 +193,18 @@ npm install
 npm run build
 ```
 
-构建完成后入口为 `server/build/index.js`。
+The entry point after build is `server/build/index.js`.
 
-### 3. 配置 AI 客户端
+### 3. Configure your AI client
 
-将以下配置加入 MCP 配置文件（**请把路径改成你的实际路径**）：
+Add the following to your MCP config file (**replace paths with your actual paths**):
 
-| 客户端 | 配置文件位置 |
-|--------|-------------|
-| Claude Code | 项目根目录 `.mcp.json` |
-| Cursor | Settings → MCP，或 `~/.cursor/mcp.json` |
-| Codex CLI | `~/.codex/config.toml` 中的 MCP 段 |
-| Cline / Roo Code | 对应扩展的 MCP 设置 |
+| Client | Config location |
+|--------|-----------------|
+| Claude Code | `.mcp.json` in the project root |
+| Cursor | Settings → MCP, or `~/.cursor/mcp.json` |
+| Codex CLI | MCP section in `~/.codex/config.toml` |
+| Cline / Roo Code | MCP settings in the extension |
 
 ```json
 {
@@ -217,59 +220,59 @@ npm run build
 }
 ```
 
-也可直接参考仓库内的 [`.mcp.json.example`](.mcp.json.example)。
+See also [`.mcp.json.example`](.mcp.json.example) in the repo.
 
-### 4. 开始使用
+### 4. Get started
 
-1. **先**用 Godot 打开你的项目（确保插件已启用）
-2. 启动 AI 客户端，确认 MCP 服务 `godot-mcp` 已连接
-3. 在对话中让 AI 操作编辑器，例如：
-   - 「获取当前场景树」
-   - 「在根节点下添加 CharacterBody2D，命名为 Player」
-   - 「创建 GDScript 并挂载到 Player」
-   - 「运行当前场景，然后截取游戏画面」
-   - 「给 TileMap 填充一片草地」
+1. **First**, open your project in Godot (with the plugin enabled)
+2. Start your AI client and confirm the `godot-mcp` MCP server is connected
+3. Ask the AI to operate the editor, for example:
+   - "Get the current scene tree"
+   - "Add a CharacterBody2D named Player under the root"
+   - "Create a GDScript and attach it to Player"
+   - "Play the current scene, then capture a game screenshot"
+   - "Fill a grass area on the TileMap"
 
-### 5. 示例项目
+### 5. Example project
 
-仓库内 `example/` 目录包含可运行的演示项目：
+The `example/` directory contains a runnable demo project:
 
 ```bash
 godot --editor example/project.godot
 ```
 
-## 工作原理
+## How it works
 
-1. AI 客户端通过 **stdio** 调用 MCP 工具（如 `add_node`）
-2. Node.js 服务将请求转为 **JSON-RPC**，经 **WebSocket** 发往 Godot 插件
-3. Godot 插件的 `command_router` 分发到对应 handler，调用 **EditorInterface** 等 API 执行
-4. 结果沿原路返回给 AI 客户端
+1. The AI client calls an MCP tool (e.g. `add_node`) over **stdio**
+2. The Node.js server converts the request to **JSON-RPC** and sends it over **WebSocket** to the Godot plugin
+3. The plugin's `command_router` dispatches to the matching handler, which calls **EditorInterface** and related APIs
+4. The result travels back to the AI client along the same path
 
-**运行时工具**（如 `get_game_scene_tree`）额外依赖：
+**Runtime tools** (e.g. `get_game_scene_tree`) additionally require:
 
-- 编辑器处于 **播放** 状态
-- `MCPRuntimeBridge` autoload 在游戏进程中轮询 `user://mcp_runtime_req.json` 并写回响应
+- The editor to be in **Play** mode
+- The `MCPRuntimeBridge` autoload polling `user://mcp_runtime_req.json` in the game process and writing responses
 
-## 扩展工具
+## Adding a tool
 
-新增一个 MCP 工具需要三步：
+To add a new MCP tool:
 
-1. 在 `addons/godot_mcp/commands/` 新建或修改命令类，在 `get_commands()` 中注册 handler
-2. 在 `command_router.gd` 的 `COMMAND_MODULES` 数组中添加该脚本路径
-3. 在 `server/src/tool-manifest.ts` 的 `TOOL_DEFINITIONS` 中添加工具名称、描述和参数 schema
+1. Create or edit a command class under `addons/godot_mcp/commands/` and register the handler in `get_commands()`
+2. Add the script path to the `COMMAND_MODULES` array in `command_router.gd`
+3. Add the tool name, description, and parameter schema to `TOOL_DEFINITIONS` in `server/src/tool-manifest.ts`
 
-然后重新构建服务：
+Then rebuild the server:
 
 ```bash
 cd server && npm run build
 ```
 
-## 已知限制
+## Known limitations
 
-- **Android 工具**：`list_android_devices` 通过 `adb devices` 列出设备；`deploy_to_android` 调用 Godot 无头导出并通过 adb 安装（需配置 Android 导出预设且 adb 在 PATH 中）
-- **运行时工具**：需先 `play_scene`，且游戏进程需加载 `MCPRuntimeBridge` autoload；`watch_signals` 在游戏运行期间监听指定节点的信号发射
-- **跨场景批量修改**（`cross_scene_set_property`）：在内存中修改场景实例，需手动保存对应场景文件
-- 部分编辑器 API 在不同 Godot 小版本间可能有差异，建议在 **4.4+** 上使用
+- **Android tools**: `list_android_devices` runs `adb devices`; `deploy_to_android` uses headless Godot export and adb install (requires an Android export preset and adb on PATH)
+- **Runtime tools**: call `play_scene` first; the game process must load the `MCPRuntimeBridge` autoload; `watch_signals` listens for signal emissions on specified nodes while the game is running
+- **Cross-scene batch edits** (`cross_scene_set_property`): modifies scene instances in memory — save the affected scene files manually
+- Some editor APIs may differ across Godot minor versions; **4.4+** is recommended
 
 ## License
 
