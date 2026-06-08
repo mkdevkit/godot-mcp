@@ -123,7 +123,7 @@ func _navigate_to(p: Dictionary) -> Dictionary:
 
 
 func _move_to(p: Dictionary) -> Dictionary:
-	return _navigate_to(p)
+	return await _navigate_to(p)
 
 
 func _watch_signals(p: Dictionary) -> Dictionary:

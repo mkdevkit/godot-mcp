@@ -21,7 +21,7 @@ func _check_editor_request() -> void:
 	DirAccess.remove_absolute(req_path)
 	if req is Dictionary and req.get("target") == "game":
 		return
-	_capture_from_tree(get_tree().root)
+	_capture_viewport()
 
 
 func _check_game_request() -> void:
@@ -31,11 +31,11 @@ func _check_game_request() -> void:
 	var req := JSON.parse_string(FileAccess.get_file_as_string(req_path))
 	DirAccess.remove_absolute(req_path)
 	if req is Dictionary and req.get("target") == "game":
-		_capture_from_tree(get_tree().root)
+		_capture_viewport()
 
 
-func _capture_from_tree(root: Node) -> void:
-	var viewport := root.get_viewport()
+func _capture_viewport() -> void:
+	var viewport := get_viewport()
 	if viewport == null:
 		return
 	var tex := viewport.get_texture()

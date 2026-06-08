@@ -1,8 +1,6 @@
 @tool
 extends "res://addons/godot_mcp/commands/base_commands.gd"
 
-const TypeParser = preload("res://addons/godot_mcp/utils/type_parser.gd")
-
 
 func get_commands() -> Dictionary:
 	return {
@@ -71,12 +69,25 @@ func _collect_files(path: String, pattern: String, recursive: bool, results: Arr
 	dir.list_dir_end()
 
 
+func _escape_glob_pattern(pattern: String) -> String:
+	var escaped := ""
+	for i in pattern.length():
+		var ch := pattern[i]
+		if ch == "*":
+			escaped += ".*"
+		elif ch in "\\.^$+?{}[]|()":
+			escaped += "\\" + ch
+		else:
+			escaped += ch
+	return escaped
+
+
 func _match_pattern(file_name: String, pattern: String) -> bool:
 	if pattern == "*" or pattern.is_empty():
 		return true
 	if pattern.contains("*"):
 		var regex := RegEx.new()
-		var escaped := RegEx.escape(pattern).replace("\\*", ".*")
+		var escaped := _escape_glob_pattern(pattern)
 		regex.compile("^%s$" % escaped)
 		return regex.search(file_name) != null
 	return file_name.contains(pattern)

@@ -48,7 +48,7 @@ func _create_resource(p: Dictionary) -> Dictionary:
 
 func _get_resource_preview(p: Dictionary) -> Dictionary:
 	var path := _norm_res(p.get("resource_path", ""))
-	var tex := editor_plugin.get_editor_interface().get_resource_filesystem().get_file_icon(path)
+	var tex: Texture2D = editor_plugin.get_editor_interface().get_resource_filesystem().get_file_icon(path)
 	return _ok({"path": path, "has_icon": tex != null})
 
 

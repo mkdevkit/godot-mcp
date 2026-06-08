@@ -47,12 +47,12 @@ func _dispatch_async(req: Dictionary) -> Dictionary:
 				return {"error": "no current scene"}
 			return {"result": NodeUtils.tree_dict(root)}
 		"get_node_properties":
-			var node := NodeUtils.resolve_in_tree(get_tree().root, params.get("node_path", ""))
+			var node := _resolve_node(params.get("node_path", ""))
 			if node == null:
 				return {"error": "node not found"}
 			return {"result": _props(node)}
 		"set_node_property":
-			var node := NodeUtils.resolve_in_tree(get_tree().root, params.get("node_path", ""))
+			var node := _resolve_node(params.get("node_path", ""))
 			if node == null:
 				return {"error": "node not found"}
 			var prop: String = params.get("property", "")
@@ -69,21 +69,28 @@ func _dispatch_async(req: Dictionary) -> Dictionary:
 			return {"result": str(val)}
 		"find_by_script":
 			var results: Array = []
-			NodeUtils.find_by_script(get_tree().root, params.get("script_path", ""), results)
+			var search_root := _search_root()
+			if search_root:
+				NodeUtils.find_by_script(search_root, params.get("script_path", ""), results)
 			return {"result": results}
 		"find_ui":
 			var results: Array = []
-			_collect_ui(get_tree().root, results)
+			var search_root := _search_root()
+			if search_root:
+				_collect_ui(search_root, results)
 			return {"result": results}
 		"click_button":
 			var text: String = params.get("text", "")
-			var btn := _find_button(get_tree().root, text)
+			var search_root := _search_root()
+			if search_root == null:
+				return {"error": "no active scene"}
+			var btn := _find_button(search_root, text)
 			if btn == null:
 				return {"error": "button not found"}
 			btn.pressed.emit()
 			return {"result": {"clicked": btn.name}}
 		"wait_for_node":
-			var node := NodeUtils.resolve_in_tree(get_tree().root, params.get("node_path", ""))
+			var node := _resolve_node(params.get("node_path", ""))
 			return {"result": {"found": node != null}}
 		"get_autoload":
 			var name: String = params.get("name", "")
@@ -94,7 +101,7 @@ func _dispatch_async(req: Dictionary) -> Dictionary:
 		"batch_get_properties":
 			var out: Array = []
 			for item in params.get("nodes", []):
-				var node := NodeUtils.resolve_in_tree(get_tree().root, item.get("path", ""))
+				var node := _resolve_node(item.get("path", ""))
 				if node:
 					out.append({"path": str(node.get_path()), "properties": _props(node, item.get("properties", []))})
 			return {"result": out}
@@ -122,7 +129,7 @@ func _watch_signals(params: Dictionary) -> Dictionary:
 	var emissions: Array = []
 	var connections: Array = []
 	for path_str in node_paths:
-		var node := NodeUtils.resolve_in_tree(get_tree().root, str(path_str))
+		var node := _resolve_node(str(path_str))
 		if node == null:
 			continue
 		for sig_info in node.get_signal_list():
@@ -140,11 +147,37 @@ func _watch_signals(params: Dictionary) -> Dictionary:
 	return {"result": {"emissions": emissions, "count": emissions.size(), "duration_ms": duration_ms}}
 
 
-func _on_signal_emitted(emissions: Array, node_path: String, signal_name: String, *args) -> void:
+func _on_signal_emitted(emissions: Array, node_path: String, signal_name: String, ...args) -> void:
 	var serialized: Array = []
 	for arg in args:
 		serialized.append(str(arg))
 	emissions.append({"node_path": node_path, "signal": signal_name, "args": serialized})
+
+
+func _search_root() -> Node:
+	var scene := get_tree().current_scene
+	if scene != null:
+		return scene
+	var tree := get_tree()
+	for i in tree.root.get_child_count():
+		var child: Node = tree.root.get_child(i)
+		if child != null:
+			return child
+	return null
+
+
+func _resolve_node(path: String) -> Node:
+	var path_text := str(path)
+	if path_text.is_empty() or path_text == ".":
+		return get_tree().current_scene
+	if path_text.begins_with("/root/") or path_text.begins_with("root/"):
+		return get_tree().root.get_node_or_null(NodePath(path_text.trim_prefix("/")))
+	if path_text.begins_with("/"):
+		return get_tree().root.get_node_or_null(NodePath(path_text.trim_prefix("/")))
+	var scene := get_tree().current_scene
+	if scene == null:
+		return null
+	return NodeUtils.resolve_in_tree(scene, path_text)
 
 
 func _props(node: Node, keys: Array = []) -> Dictionary:

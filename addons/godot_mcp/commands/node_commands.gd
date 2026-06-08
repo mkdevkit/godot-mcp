@@ -1,8 +1,6 @@
 @tool
 extends "res://addons/godot_mcp/commands/base_commands.gd"
 
-const TypeParser = preload("res://addons/godot_mcp/utils/type_parser.gd")
-
 
 func get_commands() -> Dictionary:
 	return {

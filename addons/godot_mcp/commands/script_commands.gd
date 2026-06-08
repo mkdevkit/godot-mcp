@@ -140,10 +140,8 @@ func _validate_script(params: Dictionary) -> Dictionary:
 		content = FileAccess.get_file_as_string(script_path)
 
 	var script := GDScript.new()
-	var err := script.set_source_code(content)
-	if err != OK:
-		return _ok({"valid": false, "error": "Failed to set source code"})
-	err = script.reload()
+	script.set_source_code(content)
+	var err: Error = script.reload()
 	if err != OK:
 		return _ok({"valid": false, "error": "Syntax error (code %d)" % err})
 	return _ok({"valid": true})

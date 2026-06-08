@@ -41,7 +41,9 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if not auto_dismiss_dialogs:
 		return
-	_dismiss_dialogs(get_tree().root)
+	var base_control := get_editor_interface().get_base_control()
+	if base_control:
+		_dismiss_dialogs(base_control)
 
 
 func _dismiss_dialogs(node: Node) -> void:
